@@ -1,9 +1,3 @@
-# AGENTS.md
-
-Greenfield repo — only `README.md` exists, no stack, build, test, or lint configured yet.
-
-- Do not assume a language, framework, or toolchain; follow the user's explicit choice when scaffolding.
-- When scaffolding is added, update this file with the verified commands (setup, dev, test, lint) and any non-obvious workflow order.
 # Hollow Green
 
 ## Product
