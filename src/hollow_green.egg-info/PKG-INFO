@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: hollow-green
+Version: 0.1.0
+Summary: Hollow Green Phase 1: resilience-load analysis engine for synthetic deployment workflows.
+Requires-Python: >=3.12
+Requires-Dist: fastapi>=0.115
+Requires-Dist: pydantic>=2.0
+Requires-Dist: uvicorn[standard]>=0.54.0
+Provides-Extra: test
+Requires-Dist: pytest>=8; extra == "test"
+Requires-Dist: httpx>=0.27; extra == "test"
