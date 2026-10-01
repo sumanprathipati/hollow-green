@@ -25,17 +25,55 @@ See `docs/phase1-plan.md` for the exact formulas.
 GET /v1/health -> {status: "ok"}
 GET /v1/version -> {schema_version: "1.0", app: "hollow-green"}
 POST /v1/releases:analyze -> ReleaseReport
+GET /v1/demo-releases -> DemoReleaseMeta[] (development/demo only)
+GET /v1/demo-releases/{release_id} -> ReleaseLog fixture (development/demo only)
 ```
 
 Response contains `score.{reserve_level, recovery_load, deductions, buffers}`, `follow_ups[]`, `rollback_summary`, `tolerance`.
+
+Demo fixtures are currently served read-only from `tests/fixtures` for local development. They should move to a dedicated `demo-data/` folder later.
+
+## Local dashboard
+
+Two terminals, repo root for backend, `frontend/` for the dashboard. Synthetic data only.
+
+Terminal 1 — backend:
+
+```sh
+uv sync
+uv run uvicorn api.main:app --app-dir src --reload --port 8000
+```
+
+Expected: `http://127.0.0.1:8000/v1/health` returns `{"status": "ok"}`. API docs at `http://127.0.0.1:8000/docs`.
+
+Terminal 2 — frontend:
+
+```sh
+cd frontend
+npm install
+npm run dev -- --port 3000
+```
+
+Expected: primary dashboard at `http://localhost:3000`. `http://127.0.0.1:3000` is also allowed by backend CORS. Set `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` to override the default backend address.
 
 ## Tests
 
 Synthetic data only. Every scoring rule has a match and non-match test.
 
+Backend:
+
 ```sh
-python -m pytest
-ruff check .
-ruff format --check .
-mypy src
+uv run pytest -q
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src
+```
+
+Frontend (`frontend/`):
+
+```sh
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
