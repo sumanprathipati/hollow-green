@@ -4,6 +4,8 @@ Finds releases that passed but quietly spent their recovery capacity. Green on t
 
 Phase 1 is a deterministic, explainable analysis engine for synthetic deployment-event logs. No LLM, UI, database, authentication, or cloud deployment.
 
+Stage 6 adds an optional public-data path: verifiable public GitHub evidence assessed with its own honest vocabulary (no deployment approval). Demo fixtures stay available under Demo mode with the unchanged deterministic engine.
+
 ## Concepts
 
 - **Recovery load**: capacity a successful release consumed and did not restore.
@@ -27,6 +29,8 @@ GET /v1/version -> {schema_version: "1.0", app: "hollow-green"}
 POST /v1/releases:analyze -> ReleaseReport
 GET /v1/demo-releases -> DemoReleaseMeta[] (development/demo only)
 GET /v1/demo-releases/{release_id} -> ReleaseLog fixture (development/demo only)
+GET /v1/public-repos -> allowlisted public GitHub repositories
+GET /v1/public-repos/{owner}/{repo}/assessment -> PublicDataAssessment (?candidate=, ?refresh=, ?fixture=)
 ```
 
 Response contains `score.{reserve_level, recovery_load, deductions, buffers}`, `follow_ups[]`, `rollback_summary`, `tolerance`.
@@ -35,7 +39,7 @@ Demo fixtures are currently served read-only from `tests/fixtures` for local dev
 
 ## Local dashboard
 
-Two terminals, repo root for backend, `frontend/` for the dashboard. Synthetic data only.
+Two terminals, repo root for backend, `frontend/` for the dashboard.
 
 Terminal 1 — backend:
 
@@ -56,9 +60,78 @@ npm run dev -- --port 3000
 
 Expected: primary dashboard at `http://localhost:3000`. `http://127.0.0.1:3000` is also allowed by backend CORS. Set `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` to override the default backend address.
 
+The dashboard has two modes: Demo scenarios (synthetic fixtures) and Public GitHub evidence (verifiable public repository data).
+
+## Public GitHub evidence
+
+Public repository evidence only — deployment readiness cannot be determined.
+
+Public mode uses its own honest vocabulary and never reuses Demo deployment
+outcomes (`PROCEED`, `PROCEED WITH CAUTION`, `HOLD / INVESTIGATE`,
+`ROLLBACK VERIFIED`, or `clean_success` / `recovered_success` /
+`fragile_success` / `failed`). Each assessment returns:
+
+- `change_risk_level`: `low` / `moderate` / `elevated` / `unknown` — computed
+  only from observable public data (change/release recency, recent commit
+  count, PR state, open-issue count, source-record availability).
+- `evidence_completeness`: `sufficient` / `limited` / `insufficient` — missing
+  operational signals reduce completeness; they are never treated as negative
+  release-health events.
+- `deployment_readiness`: always `not_assessable_from_public_data`.
+- `public_recommendation`: `LOWER CHANGE RISK — REVIEW REQUIRED` /
+  `MODERATE CHANGE RISK — REVIEW EVIDENCE` / `ELEVATED CHANGE RISK — INVESTIGATE` /
+  `INSUFFICIENT EVIDENCE — DO NOT INFER READINESS`.
+
+No scoring-engine window, retry-budget, Reserve Level, or classification is
+used for public assessments. The dashboard hero states the limitation
+prominently, shows an evidence-completeness card with unavailable signals, and
+keeps raw external JSON in the labeled audit view only.
+
+Setup:
+
+```sh
+cp .env.example .env
+# Optional: add a GitHub token to raise rate limits (backend-only, never committed).
+# GITHUB_TOKEN=
+# PUBLIC_REPOS=octocat/Hello-World
+uv run uvicorn api.main:app --app-dir src --reload --port 8000
+```
+
+Supported repositories: small allowlist in `PUBLIC_REPOS` (comma-separated `owner/name`). Default: `octocat/Hello-World` (tiny, stable, public). Requests for anything outside the allowlist return 404.
+
+Rate limits: unauthenticated GitHub REST calls are heavily limited (typically 60/hour per IP). Setting server-side `GITHUB_TOKEN` raises limits. On 429 the API returns a rate-limit error; the dashboard shows a rate-limit state with retry. Successful assessments are cached in memory for 5 minutes; errors fall back to cached or saved-fixture data when available, labeled via `served_from` (`live`, `cache`, or `fixture`).
+
+Data provenance: every assessment includes `data_source: "public-github"`, `retrieved_at`, `source_urls` (GitHub API + web URLs), `served_from`, `limitations`, and `unavailable_signals`. The frontend shows repository, candidate, retrieved timestamp, source links, and the public-data disclaimer, and keeps raw external JSON in the labeled Audit view only.
+
+Privacy/security boundaries: public data only. No employer, customer, private, credentialed, or scraped data. `GITHUB_TOKEN` is backend-only (see `.env.example` placeholders); it is never sent to the frontend and never appears in API responses. No LLM scoring and no duplicate scoring logic in the frontend; Demo scores come from the existing Python engine, and public assessments are computed only from observable public data.
+
+Architecture:
+
+```text
+GitHub REST (public only) ---> api/github_client.py (timeouts, token server-side,
+                               rate-limit handling, source URLs, TTL cache + saved fixture)
+                               |
+                               v
+                 hollow_green/public_data.py (typed evidence schemas +
+                   compute_public_result from observable signals only;
+                   internal ReleaseLog mapper retained isolated + unused by route)
+                               |
+                               v
+                 api/public_data.py (assessment: public_result + evidence + limitations)
+                               |
+                               v
+                 Next.js command center (Demo scenarios | Public GitHub evidence)
+```
+
+Demo path (unchanged): fixtures -> POST /v1/releases:analyze -> hollow_green/analyze.py.
+
+Real signals (observed from public GitHub): repository metadata (name, URL, default branch, stars, open-issue count), release/tag candidates (name, date, URL), recent commits (sha, date, message, URL), recent pull requests (number, title, state, URL), open-issue sample (number, title, URL), retrieval timestamp and source URLs.
+
+Unavailable signals (always listed, never inferred): health, rollback, CI, retry consumption, manual interventions, production telemetry. Missing signals lower evidence completeness; the public result never contains a deployment approval.
+
 ## Tests
 
-Synthetic data only. Every scoring rule has a match and non-match test.
+Synthetic data only, plus sanitized recorded GitHub fixtures and mocked HTTP (tests never call GitHub). Every scoring rule has a match and non-match test.
 
 Backend:
 

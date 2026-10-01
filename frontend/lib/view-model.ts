@@ -1,4 +1,10 @@
-import type { Deduction, DeploymentEvent, RecoveryFollowUp, ReleaseReport } from "@/lib/types";
+import type {
+  Deduction,
+  DeploymentEvent,
+  RecoveryFollowUp,
+  ReleaseLog,
+  ReleaseReport,
+} from "@/lib/types";
 
 export interface CardRow {
   label: string;
@@ -31,4 +37,11 @@ export function deductionRows(report: ReleaseReport): Deduction[] {
 
 export function followUpRows(report: ReleaseReport): RecoveryFollowUp[] {
   return report.follow_ups;
+}
+
+/** Map an engine event ID to its public source URL, if the mapper recorded one. */
+export function evidenceUrlForEvent(log: ReleaseLog, eventId: string): string | null {
+  const event = log.events.find((e) => e.event_id === eventId);
+  const url = event?.details?.source_url;
+  return typeof url === "string" && url.length > 0 ? url : null;
 }

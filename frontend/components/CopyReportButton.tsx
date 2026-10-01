@@ -1,47 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import type { ReleaseReport } from "@/lib/types";
 
-export default function CopyReportButton({ report }: { report: ReleaseReport }) {
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+export default function CopyReportButton({ briefText }: { briefText: string }) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
 
   async function onCopy() {
-    const text = JSON.stringify(report, null, 2);
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setFailed(false);
-    } catch {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        setCopied(true);
-        setFailed(false);
-      } catch {
-        setFailed(true);
-        setCopied(false);
-      }
-    }
+    const ok = await copyText(briefText);
+    setCopied(ok);
+    setFailed(!ok);
   }
 
   return (
-    <div>
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={onCopy}
-        className="rounded border px-3 py-1 text-sm"
+        className="rounded-md border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 hover:bg-slate-800"
         aria-live="polite"
       >
-        Copy raw JSON report
+        Copy decision brief
       </button>
-      {copied ? <span className="ml-2 text-sm">Copied</span> : null}
-      {failed ? <span className="ml-2 text-sm">Copy failed</span> : null}
+      {copied ? <span className="text-sm text-emerald-300">Copied</span> : null}
+      {failed ? <span className="text-sm text-red-300">Copy failed</span> : null}
     </div>
   );
 }

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { ReleaseReport } from "@/lib/types";
-import { deductionRows, followUpRows, scoreCards, sortedEvents } from "@/lib/view-model";
+import type { ReleaseLog, ReleaseReport } from "@/lib/types";
+import {
+  deductionRows,
+  evidenceUrlForEvent,
+  followUpRows,
+  scoreCards,
+  sortedEvents,
+} from "@/lib/view-model";
 
 function sampleReport(): ReleaseReport {
   return {
@@ -92,5 +98,44 @@ describe("deduction and follow-up rows", () => {
     const buffers = sampleReport().score.buffers;
     expect(Object.keys(buffers)).toHaveLength(10);
     expect(buffers.retries_left).toBe(1);
+  });
+});
+
+describe("evidenceUrlForEvent", () => {
+  function log(): ReleaseLog {
+    return {
+      schema_version: "1.0",
+      release_id: "r",
+      service: "s",
+      window_minutes: 60,
+      retry_budget_max: 5,
+      events: [
+        {
+          event_id: "evt-01",
+          release_id: "r",
+          ts: "2026-01-01T00:00:00+00:00",
+          type: "deploy_started",
+          actor: "system",
+          details: { source_url: "https://github.com/o/r" },
+        },
+        {
+          event_id: "evt-02",
+          release_id: "r",
+          ts: "2026-01-01T00:01:00+00:00",
+          type: "deploy_progress",
+          actor: "system",
+          details: {},
+        },
+      ],
+    };
+  }
+
+  it("returns the source URL when recorded", () => {
+    expect(evidenceUrlForEvent(log(), "evt-01")).toBe("https://github.com/o/r");
+  });
+
+  it("returns null when unavailable", () => {
+    expect(evidenceUrlForEvent(log(), "evt-02")).toBeNull();
+    expect(evidenceUrlForEvent(log(), "evt-99")).toBeNull();
   });
 });

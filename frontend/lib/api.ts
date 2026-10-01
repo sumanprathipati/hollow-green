@@ -1,4 +1,10 @@
-import type { DemoReleaseMeta, ReleaseLog, ReleaseReport } from "@/lib/types";
+import type {
+  DemoReleaseMeta,
+  PublicDataAssessment,
+  PublicRepoMeta,
+  ReleaseLog,
+  ReleaseReport,
+} from "@/lib/types";
 
 export function apiBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -56,4 +62,28 @@ export async function analyzeRelease(
     body: JSON.stringify(log),
   });
   return (await handleJson(res, url)) as ReleaseReport;
+}
+
+export async function getPublicRepos(
+  base: string = apiBaseUrl(),
+): Promise<PublicRepoMeta[]> {
+  const url = `${base}/v1/public-repos`;
+  const res = await fetch(url);
+  return (await handleJson(res, url)) as PublicRepoMeta[];
+}
+
+export async function getPublicAssessment(
+  repoFullName: string,
+  opts: { candidate?: string; refresh?: boolean; fixture?: boolean } = {},
+  base: string = apiBaseUrl(),
+): Promise<PublicDataAssessment> {
+  const [owner, repo] = repoFullName.split("/");
+  const params = new URLSearchParams();
+  if (opts.candidate) params.set("candidate", opts.candidate);
+  if (opts.refresh) params.set("refresh", "true");
+  if (opts.fixture) params.set("fixture", "true");
+  const qs = params.toString();
+  const url = `${base}/v1/public-repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/assessment${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url);
+  return (await handleJson(res, url)) as PublicDataAssessment;
 }

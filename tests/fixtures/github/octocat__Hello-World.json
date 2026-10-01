@@ -1,0 +1,104 @@
+{
+  "repo_full_name": "octocat/Hello-World",
+  "retrieved_at": "2026-01-20T00:00:00+00:00",
+  "source_urls": [
+    "https://api.github.com/repos/octocat/Hello-World",
+    "https://api.github.com/repos/octocat/Hello-World/releases?per_page=5",
+    "https://api.github.com/repos/octocat/Hello-World/tags?per_page=5",
+    "https://api.github.com/repos/octocat/Hello-World/commits?per_page=5",
+    "https://api.github.com/repos/octocat/Hello-World/pulls?state=all&per_page=5&sort=updated&direction=desc",
+    "https://api.github.com/repos/octocat/Hello-World/issues?state=open&per_page=5"
+  ],
+  "/repos/octocat/Hello-World": {
+    "full_name": "octocat/Hello-World",
+    "html_url": "https://github.com/octocat/Hello-World",
+    "default_branch": "master",
+    "stargazers_count": 100,
+    "open_issues_count": 2
+  },
+  "/repos/octocat/Hello-World/releases": [
+    {
+      "tag_name": "v1.0",
+      "name": "First release",
+      "draft": false,
+      "prerelease": false,
+      "published_at": "2026-01-15T12:00:00Z",
+      "html_url": "https://github.com/octocat/Hello-World/releases/tag/v1.0"
+    }
+  ],
+  "/repos/octocat/Hello-World/tags": [
+    {
+      "name": "v1.0",
+      "commit": {
+        "sha": "aaa111",
+        "url": "https://api.github.com/repos/octocat/Hello-World/commits/aaa111"
+      }
+    },
+    {
+      "name": "v1.1",
+      "commit": {
+        "sha": "bbb222",
+        "url": "https://api.github.com/repos/octocat/Hello-World/commits/bbb222"
+      }
+    }
+  ],
+  "/repos/octocat/Hello-World/commits": [
+    {
+      "sha": "aaa111",
+      "html_url": "https://github.com/octocat/Hello-World/commit/aaa111",
+      "commit": {
+        "author": { "date": "2026-01-10T10:00:00Z" },
+        "message": "Initial commit"
+      }
+    },
+    {
+      "sha": "bbb222",
+      "html_url": "https://github.com/octocat/Hello-World/commit/bbb222",
+      "commit": {
+        "author": { "date": "2026-01-12T10:00:00Z" },
+        "message": "Add readme"
+      }
+    },
+    {
+      "sha": "ccc333",
+      "html_url": "https://github.com/octocat/Hello-World/commit/ccc333",
+      "commit": {
+        "author": { "date": "2026-01-14T10:00:00Z" },
+        "message": "Fix typo"
+      }
+    }
+  ],
+  "/repos/octocat/Hello-World/pulls": [
+    {
+      "number": 1,
+      "title": "Update readme",
+      "state": "closed",
+      "html_url": "https://github.com/octocat/Hello-World/pull/1",
+      "merged_at": "2026-01-13T10:00:00Z",
+      "created_at": "2026-01-12T09:00:00Z"
+    },
+    {
+      "number": 2,
+      "title": "WIP experiment",
+      "state": "open",
+      "html_url": "https://github.com/octocat/Hello-World/pull/2",
+      "merged_at": null,
+      "created_at": "2026-01-16T09:00:00Z"
+    }
+  ],
+  "/repos/octocat/Hello-World/issues": [
+    {
+      "number": 10,
+      "title": "Docs typo",
+      "html_url": "https://github.com/octocat/Hello-World/issues/10",
+      "created_at": "2026-01-17T09:00:00Z"
+    },
+    {
+      "number": 2,
+      "title": "WIP experiment",
+      "html_url": "https://github.com/octocat/Hello-World/pull/2",
+      "created_at": "2026-01-16T09:00:00Z",
+      "pull_request": { "url": "https://api.github.com/repos/octocat/Hello-World/pulls/2" }
+    }
+  ]
+}

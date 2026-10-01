@@ -93,3 +93,74 @@ export interface DemoReleaseMeta {
   display_name: string;
   classification_hint: Classification;
 }
+
+export interface PublicRepoMeta {
+  repo_full_name: string;
+  display_name: string;
+  repo_url: string;
+}
+
+export interface CandidateInfo {
+  candidate_id: string;
+  kind: string;
+  name: string;
+  published_at: string | null;
+  url: string;
+}
+
+export interface CommitRef {
+  sha: string;
+  message: string;
+  date: string | null;
+  url: string;
+}
+
+export interface PullRef {
+  number: number;
+  title: string;
+  state: string;
+  url: string;
+}
+
+export interface IssueRef {
+  number: number;
+  title: string;
+  url: string;
+}
+
+export interface RepositoryEvidence {
+  repo_full_name: string;
+  repo_url: string;
+  default_branch: string;
+  stars: number;
+  open_issues_count: number;
+  candidate: CandidateInfo;
+  candidates_available: CandidateInfo[];
+  commits_recent: CommitRef[];
+  pulls_recent: PullRef[];
+  issues_open_sample: IssueRef[];
+  retrieved_at: string;
+  source_urls: string[];
+}
+
+export interface PublicResult {
+  change_risk_level: string;
+  evidence_completeness: string;
+  deployment_readiness: string;
+  public_recommendation: string;
+  reasons: string[];
+}
+
+export interface PublicDataAssessment {
+  data_source: string;
+  served_from: string;
+  repo_full_name: string;
+  candidate: CandidateInfo;
+  retrieved_at: string;
+  source_urls: string[];
+  limitations: string[];
+  unavailable_signals: string[];
+  disclaimer: string;
+  public_result: PublicResult;
+  evidence: RepositoryEvidence;
+}

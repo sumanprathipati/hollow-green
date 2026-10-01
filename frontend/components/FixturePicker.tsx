@@ -10,12 +10,12 @@ interface Props {
 export default function FixturePicker({ metas, selectedId, disabled, onChange }: Props) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor="fixture-select" className="text-sm font-medium">
-        Demo release
+      <label htmlFor="fixture-select" className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        Release fixture
       </label>
       <select
         id="fixture-select"
-        className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        className="rounded-md border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100"
         value={selectedId ?? ""}
         disabled={disabled || metas.length === 0}
         onChange={(e) => onChange(e.target.value)}
