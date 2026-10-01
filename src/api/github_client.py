@@ -162,5 +162,15 @@ def set_cached(key: str, value: dict[str, object]) -> None:
     _cache[key] = (datetime.now(UTC), value)
 
 
+def peek_cache(key: str) -> tuple[float, dict[str, object]] | None:
+    """Return (age_seconds, value) without evicting expired entries."""
+    entry = _cache.get(key)
+    if not entry:
+        return None
+    stored_at, value = entry
+    age_seconds = (datetime.now(UTC) - stored_at).total_seconds()
+    return age_seconds, value
+
+
 def clear_cache() -> None:
     _cache.clear()

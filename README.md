@@ -125,6 +125,49 @@ GitHub REST (public only) ---> api/github_client.py (timeouts, token server-side
 
 Demo path (unchanged): fixtures -> POST /v1/releases:analyze -> hollow_green/analyze.py.
 
+## Evidence-grounded change review (optional AI assistance)
+
+Public GitHub evidence mode can show an "AI-assisted evidence review" card that
+explains the deterministic assessment in plain language. It is explanatory
+assistance only: the deterministic `public_result` is the source of truth, and
+no score, threshold, risk level, or recommendation is decided or altered by the
+model. Demo mode never renders this card.
+
+```text
+Browser
+  -> Next.js command center
+  -> FastAPI public evidence assessment
+  -> normalized/capped EvidenceBundle
+  -> backend-only AI provider adapter
+  -> strict Pydantic/citation/safety validator
+  -> structured cited explanation returned to UI
+```
+
+Rules enforced in code and tests:
+
+- The model receives only the normalized, capped evidence bundle for the
+  selected repository (repository/candidate metadata, at most 5 commits, 5 pull
+  requests, 5 issues, unavailable-signal and limitation records). No tokens,
+  headers, raw API payloads, README text, source code, cookies, file paths, or
+  free-text input are ever sent.
+- Every factual bullet carries `[En]` citations that must exist in the bundle;
+  sources render as clickable links built from bundle URLs only. The model may
+  not emit URLs, Markdown links, or HTML.
+- Output is capped (4 sections, 4 bullets each, 350 words) and scanned for
+  forbidden deployment/demo vocabulary and unsupported facts, dates, counts, or
+  references. Failures return `blocked` without the rejected text.
+- Provider keys live only in server environment (`AI_REVIEW_PROVIDER`,
+  `AI_REVIEW_BASE_URL`, `AI_REVIEW_MODEL`, `AI_REVIEW_API_KEY`, documented in
+  `.env.example`); never `NEXT_PUBLIC_`, never in responses, logs, or the
+  browser. Timeouts are 10s connect / 20s read, no streaming, bounded sizes.
+- Without configuration the endpoint returns HTTP 200 `unavailable` with setup
+  guidance; the deterministic view keeps working. Provider outages map to safe
+  502/429 responses without leaking details.
+
+Endpoint: `POST /v1/public-data/assessments/{owner}/{repo}/{candidate}/evidence-review`
+with body `{"regenerate": false}` (extra fields rejected) and the existing
+`refresh` / `fixture` query semantics, including `stale_cache` fallback.
+
 Real signals (observed from public GitHub): repository metadata (name, URL, default branch, stars, open-issue count), release/tag candidates (name, date, URL), recent commits (sha, date, message, URL), recent pull requests (number, title, state, URL), open-issue sample (number, title, URL), retrieval timestamp and source URLs.
 
 Unavailable signals (always listed, never inferred): health, rollback, CI, retry consumption, manual interventions, production telemetry. Missing signals lower evidence completeness; the public result never contains a deployment approval.

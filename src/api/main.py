@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.demo_releases import ALLOWED_ORIGINS, demo_router
+from api.evidence_review import review_router
 from api.public_data import public_router
 from api.routes import router
 
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(demo_router)
     app.include_router(public_router)
+    app.include_router(review_router)
     return app
 
 

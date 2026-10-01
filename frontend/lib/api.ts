@@ -1,5 +1,6 @@
 import type {
   DemoReleaseMeta,
+  EvidenceReviewResponse,
   PublicDataAssessment,
   PublicRepoMeta,
   ReleaseLog,
@@ -86,4 +87,24 @@ export async function getPublicAssessment(
   const url = `${base}/v1/public-repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/assessment${qs ? `?${qs}` : ""}`;
   const res = await fetch(url);
   return (await handleJson(res, url)) as PublicDataAssessment;
+}
+
+export async function requestEvidenceReview(
+  owner: string,
+  repo: string,
+  candidate: string,
+  opts: { refresh?: boolean; fixture?: boolean; regenerate?: boolean } = {},
+  base: string = apiBaseUrl(),
+): Promise<EvidenceReviewResponse> {
+  const params = new URLSearchParams();
+  if (opts.refresh) params.set("refresh", "true");
+  if (opts.fixture) params.set("fixture", "true");
+  const qs = params.toString();
+  const url = `${base}/v1/public-data/assessments/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${encodeURIComponent(candidate)}/evidence-review${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ regenerate: opts.regenerate ?? false }),
+  });
+  return (await handleJson(res, url)) as EvidenceReviewResponse;
 }

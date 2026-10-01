@@ -164,3 +164,51 @@ export interface PublicDataAssessment {
   public_result: PublicResult;
   evidence: RepositoryEvidence;
 }
+
+export type EvidenceReviewStatus =
+  | "available"
+  | "unavailable"
+  | "error"
+  | "blocked";
+
+export interface EvidenceReviewBullet {
+  text: string;
+  citation_ids: string[];
+}
+
+export interface EvidenceReviewSections {
+  evidence_summary: EvidenceReviewBullet[];
+  deterministic_assessment_explanation: EvidenceReviewBullet[];
+  evidence_gaps: EvidenceReviewBullet[];
+  human_review_checks: EvidenceReviewBullet[];
+}
+
+export interface EvidenceReviewSource {
+  id: string;
+  label: string;
+  url: string;
+  kind: string;
+}
+
+export interface EvidenceReviewResponse {
+  status: EvidenceReviewStatus;
+  provider_configured: boolean;
+  generated_at?: string | null;
+  message?: string | null;
+  assessment_identity?: {
+    owner: string;
+    repo: string;
+    candidate: string;
+    retrieved_at: string;
+    served_from: string;
+  } | null;
+  deterministic_assessment?: {
+    change_risk_level: string;
+    evidence_completeness: string;
+    deployment_readiness: string;
+    public_recommendation: string;
+  } | null;
+  sections?: EvidenceReviewSections | null;
+  sources: EvidenceReviewSource[];
+  limitations: string[];
+}

@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import CopyReportButton from "@/components/CopyReportButton";
 import DecisionHero from "@/components/DecisionHero";
 import { EmptyState, ErrorState } from "@/components/EmptyErrorStates";
+import EvidenceReviewCard from "@/components/EvidenceReviewCard";
 import EvidenceTabs from "@/components/EvidenceTabs";
 import FixturePicker from "@/components/FixturePicker";
 import MetricCard from "@/components/MetricCard";
@@ -670,6 +671,14 @@ export default function Home() {
               </ul>
             </div>
           </section>
+
+          <EvidenceReviewCard
+            key={`${assessment.repo_full_name}|${assessment.candidate.candidate_id}`}
+            owner={assessment.repo_full_name.split("/")[0]}
+            repo={assessment.repo_full_name.split("/")[1]}
+            candidate={assessment.candidate.candidate_id}
+            recommendation={assessment.public_result.public_recommendation}
+          />
 
           <section aria-label="Source evidence" className="rounded-lg border border-slate-800 bg-slate-900 p-4">
             <h2 className="text-sm font-semibold text-slate-100">Source evidence (public GitHub)</h2>
