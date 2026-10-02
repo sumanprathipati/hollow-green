@@ -75,6 +75,86 @@ class NoProvider(EvidenceReviewProvider):
         raise ProviderError("config")
 
 
+TEST_PROVIDER_MODES: tuple[str, ...] = ("available", "blocked", "error")
+
+
+class TestReviewProvider(EvidenceReviewProvider):
+    """TEST-ONLY provider for E2E/dev. Reachable only when E2E_TEST_MODE=1
+    is set in the backend environment AND the caller passes an explicit
+    test_provider query value. Never the default; no UI control exposes it."""
+
+    name = "test"
+
+    def __init__(self, mode: str):
+        self.mode = mode
+
+    def is_configured(self) -> bool:
+        return True
+
+    def generate(self, bundle: er.EvidenceBundle, system: str, user: str) -> dict[str, object]:
+        if self.mode == "error":
+            raise ProviderError("transport")
+        by_id = {r.id: r for r in bundle.records}
+        commits = [r for r in bundle.records if r.kind == "commit"]
+        first_commit = commits[0].id if commits else bundle.records[0].id
+        candidate = next(r for r in bundle.records if r.id == "E2")
+        unavailable = next(r for r in bundle.records if r.kind == "unavailable_signal")
+        published = candidate.facts.get("published_at", "unknown")
+        summary = [
+            {
+                "text": (
+                    f"Repository {bundle.repo_full_name} shows "
+                    f"{len(commits)} recent commits [E1] [{first_commit}]."
+                ),
+                "citation_ids": ["E1", first_commit],
+            },
+            {
+                "text": f"Candidate recorded with published date {published} [E2].",
+                "citation_ids": ["E2"],
+            },
+        ]
+        if self.mode == "blocked":
+            summary[0] = {
+                "text": "This release is safe to deploy now [E1].",
+                "citation_ids": ["E1"],
+            }
+        sections = {
+            "evidence_summary": summary,
+            "deterministic_assessment_explanation": [
+                {
+                    "text": (
+                        f"The deterministic result is {bundle.change_risk_level} "
+                        f"change risk with {bundle.evidence_completeness} evidence "
+                        f"[{candidate.id}] [{unavailable.id}]."
+                    ),
+                    "citation_ids": [candidate.id, unavailable.id],
+                }
+            ],
+            "evidence_gaps": [
+                {
+                    "text": (
+                        "No public evidence was available for "
+                        f"{unavailable.facts.get('signals', 'operations')} "
+                        f"[{unavailable.id}]."
+                    ),
+                    "citation_ids": [unavailable.id],
+                }
+            ],
+            "human_review_checks": [
+                {
+                    "text": "Confirm CI status in the organization's internal system.",
+                    "citation_ids": [],
+                }
+            ],
+        }
+        cited = ["E1", first_commit, "E2", unavailable.id]
+        sources = [
+            {"id": cid, "label": by_id[cid].label, "url": by_id[cid].url, "kind": by_id[cid].kind}
+            for cid in cited
+        ]
+        return {"sections": sections, "sources": sources}
+
+
 class OpenAICompatibleProvider(EvidenceReviewProvider):
     name = "openai_compatible"
 
@@ -170,6 +250,21 @@ def get_review_provider() -> EvidenceReviewProvider:
     return resolve_provider()
 
 
+def _test_provider_override(test_provider: str | None) -> EvidenceReviewProvider | None:
+    """TEST-ONLY hook. Honored only when E2E_TEST_MODE=1 is set server-side.
+
+    In normal runs the parameter is ignored entirely, so no UI control or
+    user input can enable the test provider.
+    """
+    if test_provider is None:
+        return None
+    if os.environ.get("E2E_TEST_MODE", "") != "1":
+        return None
+    if test_provider not in TEST_PROVIDER_MODES:
+        raise HTTPException(status_code=422, detail="unsupported test provider mode")
+    return TestReviewProvider(test_provider)
+
+
 class EvidenceReviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -249,7 +344,10 @@ def load_review_assessment(
     except PublicDataNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     cache_key = f"{repo_full_name}|{candidate or 'default'}"
-    if fixture:
+    use_fixture = fixture or (
+        github_client.fixture_only_enabled() and github_client.has_fixture(owner, repo)
+    )
+    if use_fixture:
         try:
             raw = github_client.load_fixture_evidence(owner, repo)
         except PublicDataNotFound as exc:
@@ -370,23 +468,28 @@ def post_evidence_review(
     body: EvidenceReviewRequest,
     refresh: bool = Query(default=False),
     fixture: bool = Query(default=False),
+    test_provider: str | None = Query(default=None),
 ) -> EvidenceReviewResponse:
     logger.info("evidence_review requested regenerate=%s", body.regenerate)
     assessment = load_review_assessment(owner, repo, candidate, refresh, fixture)
     identity = _identity(owner, repo, assessment)
     echo = _echo(assessment)
-    try:
-        provider = get_review_provider()
-    except ProviderError:
-        return EvidenceReviewResponse(
-            status="error",
-            provider_configured=False,
-            generated_at=datetime.now(UTC).isoformat(),
-            message="Evidence review provider configuration is not supported.",
-            assessment_identity=identity,
-            deterministic_assessment=echo,
-            limitations=_limitations(assessment),
-        )
+    override = _test_provider_override(test_provider)
+    if override is not None:
+        provider: EvidenceReviewProvider = override
+    else:
+        try:
+            provider = get_review_provider()
+        except ProviderError:
+            return EvidenceReviewResponse(
+                status="error",
+                provider_configured=False,
+                generated_at=datetime.now(UTC).isoformat(),
+                message="Evidence review provider configuration is not supported.",
+                assessment_identity=identity,
+                deterministic_assessment=echo,
+                limitations=_limitations(assessment),
+            )
     if not provider.is_configured():
         return EvidenceReviewResponse(
             status="unavailable",

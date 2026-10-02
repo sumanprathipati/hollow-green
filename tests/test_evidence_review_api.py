@@ -281,3 +281,48 @@ def test_no_real_http_or_provider(monkeypatch):
     r = client.post(REVIEW_URL + "?fixture=true", json={})
     assert r.status_code == 200
     assert r.json()["status"] == "unavailable"
+
+
+def test_test_provider_ignored_without_e2e_env():
+    r = client.post(REVIEW_URL + "?fixture=true&test_provider=available", json={})
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "unavailable"
+
+
+def test_test_provider_available_with_e2e_env(monkeypatch):
+    monkeypatch.setenv("E2E_TEST_MODE", "1")
+    r = client.post(REVIEW_URL + "?fixture=true&test_provider=available", json={})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["status"] == "available"
+    assert body["provider_configured"] is True
+
+
+def test_test_provider_blocked_with_e2e_env(monkeypatch):
+    monkeypatch.setenv("E2E_TEST_MODE", "1")
+    r = client.post(REVIEW_URL + "?fixture=true&test_provider=blocked", json={})
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "blocked"
+
+
+def test_test_provider_error_with_e2e_env(monkeypatch):
+    monkeypatch.setenv("E2E_TEST_MODE", "1")
+    r = client.post(REVIEW_URL + "?fixture=true&test_provider=error", json={})
+    assert r.status_code == 502
+
+
+def test_test_provider_bad_value_422_with_e2e_env(monkeypatch):
+    monkeypatch.setenv("E2E_TEST_MODE", "1")
+    r = client.post(REVIEW_URL + "?fixture=true&test_provider=evil", json={})
+    assert r.status_code == 422
+
+
+def test_fixture_only_env_serves_fixture(monkeypatch):
+    def boom(owner, repo):
+        raise AssertionError("must not call GitHub in fixture-only mode")
+
+    monkeypatch.setattr(github_client, "fetch_live_evidence", boom)
+    monkeypatch.setenv("PUBLIC_DATA_FIXTURE_ONLY", "1")
+    r = client.get("/v1/public-repos/octocat/Hello-World/assessment")
+    assert r.status_code == 200, r.text
+    assert r.json()["served_from"] == "fixture"

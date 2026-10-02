@@ -1,5 +1,7 @@
 # Hollow Green
 
+[![CI](https://github.com/sumanprathipati/hollow-green/actions/workflows/ci.yml/badge.svg)](https://github.com/sumanprathipati/hollow-green/actions/workflows/ci.yml)
+
 Finds releases that passed but quietly spent their recovery capacity. Green on the dashboard, hollow underneath.
 
 Phase 1 is a deterministic, explainable analysis engine for synthetic deployment-event logs. No LLM, UI, database, authentication, or cloud deployment.
@@ -193,3 +195,50 @@ npm run typecheck
 npm run test
 npm run build
 ```
+
+## Testing and quality
+
+- Backend gates: `ruff format --check`, `ruff check`, `mypy src`, `pytest -q`.
+- Frontend gates: `npm run typecheck`, `npm run lint`, `npm run test` (Vitest unit tests only), `npm run build`.
+- Playwright end-to-end (`frontend/`): `npm run test:e2e` (headless) and `npm run test:e2e:ui` (interactive). E2E runs against the production build plus a deterministic backend, covering Demo scenarios (all five fixtures), public evidence mode, AI review states (unavailable/available/blocked), API-unavailable recovery, mobile layout, link safety, and axe accessibility in both modes. Not part of `npm run test`.
+- Accessibility: `@axe-core/playwright` serious/critical gate in E2E plus manual Lighthouse runs (see below).
+- CI: `.github/workflows/ci.yml` runs backend, frontend, and E2E jobs on push to `main` and pull requests. CI uses Node 22 and Python 3.12 with locked dependencies; no real secrets (fixtures + test provider only).
+
+### Running E2E locally
+
+```sh
+cd frontend
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8001 npm run build
+npm run test:e2e
+```
+
+The Playwright config starts its own backend (`:8001`, fixture-only) and frontend (`:3000`); stop any dev servers on those ports first. E2E test mode is enabled only by backend env vars (test-only, never defaults, no UI control):
+
+- `PUBLIC_DATA_FIXTURE_ONLY=1` — serve saved fixtures instead of live GitHub.
+- `E2E_TEST_MODE=1` — honor the `test_provider` query param (`available` | `blocked` | `error`) on the evidence-review endpoint. Ignored entirely without the env var.
+
+### Accessibility audit
+
+Lighthouse (accessibility, best-practices, SEO) via `npx` (no global install), against the production build:
+
+```sh
+CHROME_PATH="$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux/chrome 2>/dev/null || ls -d ~/Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/*Chromium*.app/Contents/MacOS/*Chromium* | head -1)" \
+npx -y lighthouse@12 http://localhost:3000/ \
+  --only-categories=accessibility,best-practices,seo \
+  --preset=desktop --output=json --output-path=/tmp/lh.json \
+  --chrome-flags="--headless --no-sandbox" --quiet
+# mobile: replace --preset=desktop with --form-factor=mobile
+```
+
+Results (initial load; interactive states are covered by the axe E2E tests):
+
+| Mode     | Accessibility before | Accessibility after |
+|----------|---------------------:|--------------------:|
+| Desktop  | 100 | 100 |
+| Mobile   | 100 | 100 |
+
+Best-practices and SEO also scored 100 before and after; performance was not chased on local hardware. Fixes applied: single `<main>` landmark (was conditionally rendered), full tab keyboard pattern (arrow/Home/End keys, roving tabindex, labelled tabpanel), explicit `:focus-visible` styling, and a `prefers-reduced-motion` guard. Axe reports zero violations of any impact in Demo-analyzed and public-assessed states, with zero disabled rules.
+
+## Security and AI guardrails
+
+See [SECURITY.md](SECURITY.md) for the threat model. In short: commit messages, PR titles, and issue titles are untrusted third-party text. They travel to the AI provider only inside delimited `<<<EVIDENCE ...>>>` data blocks after sanitization (control characters, URLs, angle brackets, and citation spoofing removed), alongside an instruction to ignore embedded directives. The provider call has no tools or browsing. The strict output validator and human review are the backstops — no prompt-injection defense is perfect.

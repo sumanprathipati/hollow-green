@@ -421,7 +421,7 @@ export default function Home() {
       )}
 
       {demoReady && report && log ? (
-        <main className="mt-4 flex flex-col gap-4">
+        <div className="mt-4 flex flex-col gap-4">
           <DecisionHero
             report={report}
             recommendation={getRecommendation(report.classification)}
@@ -631,11 +631,11 @@ export default function Home() {
               </div>
             }
           />
-        </main>
+        </div>
       ) : null}
 
       {publicReady && assessment ? (
-        <main className="mt-4 flex flex-col gap-4">
+        <div className="mt-4 flex flex-col gap-4">
           <PublicDecisionHero assessment={assessment} />
 
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -795,7 +795,7 @@ export default function Home() {
               </pre>
             </details>
           </div>
-        </main>
+        </div>
       ) : null}
     </AppShell>
   );

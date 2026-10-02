@@ -22,7 +22,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </span>
         </div>
       </header>
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6">{children}</div>
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6">{children}</main>
       <footer className="border-t border-slate-800">
         <p className="mx-auto w-full max-w-6xl px-4 py-4 text-xs text-slate-400 md:px-6">
           Synthetic demo data only. No real releases. Reserve Level is the only numeric score;

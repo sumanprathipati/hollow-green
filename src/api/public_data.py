@@ -277,7 +277,10 @@ def get_public_assessment(
     except PublicDataNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     cache_key = f"{repo_full_name}|{candidate or 'default'}"
-    if fixture:
+    use_fixture = fixture or (
+        github_client.fixture_only_enabled() and github_client.has_fixture(owner, repo)
+    )
+    if use_fixture:
         try:
             raw = github_client.load_fixture_evidence(owner, repo)
         except PublicDataNotFound as exc:

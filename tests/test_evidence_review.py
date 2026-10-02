@@ -124,12 +124,26 @@ def test_prompt_contains_rules_and_no_secrets():
     assert "[E1]" in system
     assert "350" in system and "4 bullets" in system
     assert "JSON only" in system
+    assert "untrusted" in system
+    assert "<<<EVIDENCE" in system
     lowered = (system + user).lower()
     for secret in ("github_token", "bearer", "authorization", "api_key"):
         assert secret not in lowered
-    payload = json.loads(user)
-    assert set(payload["records"][0].keys()) == {"id", "kind", "label", "url", "facts"}
+    assert user.count("<<<EVIDENCE") == bundle.record_count
+    openers = [line for line in user.splitlines() if line.startswith("<<<EVIDENCE")]
+    closers = [line for line in user.splitlines() if line.endswith("EVIDENCE>>>")]
+    assert len(openers) == bundle.record_count
+    assert len(closers) == bundle.record_count
+    assert "END OF EVIDENCE DATA." in user
     assert len(user) <= er.MAX_PROMPT_CHARS
+
+
+def test_prompt_has_no_tool_or_function_access():
+    bundle, _ = load_bundle()
+    system, user = er.build_review_prompt(bundle)
+    for token in ("tools", "functions", "tool_choice", "browse", "fetch_url"):
+        assert token not in system.lower()
+        assert token not in user.lower()
 
 
 def test_valid_output_accepted():

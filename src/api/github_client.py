@@ -47,6 +47,11 @@ def get_github_token() -> str | None:
     return token or None
 
 
+def fixture_only_enabled() -> bool:
+    """Test-only mode for deterministic E2E/dev runs. Never enabled by default."""
+    return os.environ.get("PUBLIC_DATA_FIXTURE_ONLY", "") == "1"
+
+
 def allowed_repos() -> list[str]:
     raw = os.environ.get("PUBLIC_REPOS", "").strip()
     if not raw:
@@ -133,6 +138,11 @@ def fetch_live_evidence(owner: str, repo: str) -> dict[str, object]:
 
 def fixture_path(owner: str, repo: str) -> Path:
     return (FIXTURE_DIR / f"{owner}__{repo}.json").resolve()
+
+
+def has_fixture(owner: str, repo: str) -> bool:
+    target = fixture_path(owner, repo)
+    return target.parent == FIXTURE_DIR.resolve() and target.is_file()
 
 
 def load_fixture_evidence(owner: str, repo: str) -> dict[str, object]:
