@@ -21,7 +21,14 @@ def post_fixture(name: str):
 
 
 def test_health():
-    assert client.get("/v1/health").json() == {"status": "ok"}
+    body = client.get("/v1/health").json()
+    assert body["status"] == "ok"
+    assert body == {
+        "status": "ok",
+        "environment": "development",
+        "public_data": "available",
+        "ai_review": "unavailable",
+    }
 
 
 def test_version():

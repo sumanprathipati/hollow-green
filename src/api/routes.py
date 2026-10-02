@@ -3,6 +3,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
+from api.evidence_review import OpenAICompatibleProvider
+from api.settings import environment, public_data_status
 from hollow_green.analyze import analyze_log
 from hollow_green.ingest import IngestError
 from hollow_green.schemas import ReleaseLog
@@ -12,7 +14,13 @@ router = APIRouter()
 
 @router.get("/v1/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    ai_status = "configured" if OpenAICompatibleProvider.from_env() is not None else "unavailable"
+    return {
+        "status": "ok",
+        "environment": environment(),
+        "public_data": public_data_status(),
+        "ai_review": ai_status,
+    }
 
 
 @router.get("/v1/version")

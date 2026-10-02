@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Literal, cast
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from api import github_client
@@ -18,6 +18,7 @@ from api.github_client import (
     PublicDataRateLimited,
 )
 from api.public_data import build_assessment
+from api.rate_limit import check_or_429, review_limiter
 from hollow_green import evidence_review as er
 
 logger = logging.getLogger(__name__)
@@ -258,7 +259,9 @@ def _test_provider_override(test_provider: str | None) -> EvidenceReviewProvider
     """
     if test_provider is None:
         return None
-    if os.environ.get("E2E_TEST_MODE", "") != "1":
+    from api.settings import e2e_test_mode
+
+    if not e2e_test_mode():
         return None
     if test_provider not in TEST_PROVIDER_MODES:
         raise HTTPException(status_code=422, detail="unsupported test provider mode")
@@ -333,10 +336,13 @@ def load_review_assessment(
     candidate: str,
     refresh: bool,
     fixture: bool,
+    request: Request | None = None,
 ) -> dict[str, object]:
     """Load the normalized assessment with established cache/fixture semantics.
 
     Never touches ReleaseLog or analyze_log. Supports stale_cache fallback.
+    The expensive-operation allowance is consumed only when a live upstream
+    call is actually attempted.
     """
     repo_full_name = f"{owner}/{repo}"
     try:
@@ -362,6 +368,8 @@ def load_review_assessment(
             age_seconds, cached = peeked
             if age_seconds <= github_client.CACHE_TTL_SECONDS:
                 return cached
+    if request is not None:
+        check_or_429(request, review_limiter, "evidence review")
     try:
         raw = github_client.fetch_live_evidence(owner, repo)
     except PublicDataRateLimited as exc:
@@ -466,12 +474,13 @@ def post_evidence_review(
     repo: str,
     candidate: str,
     body: EvidenceReviewRequest,
+    request: Request,
     refresh: bool = Query(default=False),
     fixture: bool = Query(default=False),
     test_provider: str | None = Query(default=None),
 ) -> EvidenceReviewResponse:
     logger.info("evidence_review requested regenerate=%s", body.regenerate)
-    assessment = load_review_assessment(owner, repo, candidate, refresh, fixture)
+    assessment = load_review_assessment(owner, repo, candidate, refresh, fixture, request)
     identity = _identity(owner, repo, assessment)
     echo = _echo(assessment)
     override = _test_provider_override(test_provider)

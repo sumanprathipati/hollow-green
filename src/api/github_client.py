@@ -49,7 +49,9 @@ def get_github_token() -> str | None:
 
 def fixture_only_enabled() -> bool:
     """Test-only mode for deterministic E2E/dev runs. Never enabled by default."""
-    return os.environ.get("PUBLIC_DATA_FIXTURE_ONLY", "") == "1"
+    from api.settings import fixture_only_mode
+
+    return fixture_only_mode()
 
 
 def allowed_repos() -> list[str]:

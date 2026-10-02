@@ -1,8 +1,71 @@
 # Hollow Green
 
 [![CI](https://github.com/sumanprathipati/hollow-green/actions/workflows/ci.yml/badge.svg)](https://github.com/sumanprathipati/hollow-green/actions/workflows/ci.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/next.js-app_router-black)](https://nextjs.org/)
+
+Hollow Green is an evidence-grounded change-risk intelligence dashboard that analyzes public GitHub change evidence and provides deterministic, auditable review guidance with optional citation-backed AI explanations.
 
 Finds releases that passed but quietly spent their recovery capacity. Green on the dashboard, hollow underneath.
+
+- Live demo: Add after deployment.
+- API docs: Add after backend deployment.
+
+## Why it matters
+
+Public repository evidence helps teams prioritize change review: recent
+commits, pull requests, and open issues are real, checkable signals. Hollow
+Green turns them into an honest risk picture — and deliberately refuses to
+infer production deployment readiness without private operational data it
+cannot see.
+
+## What makes it different
+
+- Deterministic assessment authority: scores and recommendations come from
+  versioned Python rules, never from the model.
+- Real source provenance: every claim links to the GitHub record it came from.
+- Evidence completeness: missing signals are reported, never invented.
+- Grounded AI constraints: citation-required, vocabulary-scanned,
+  prompt-injection-hardened explanations with a safe blocked state.
+- Accessibility, Playwright end-to-end tests, and CI on every push.
+
+## Architecture
+
+```text
+Browser (Next.js) -> FastAPI (scores + evidence + gated AI review) -> GitHub REST
+         deterministic engine first; AI only explains cited public evidence
+```
+
+## Screenshots and demo
+
+Captured locally against fixture data (see
+`docs/screenshots/capture-checklist.md`):
+
+![Dashboard decision hero](docs/screenshots/demo-decision-hero.png)
+![Public evidence view](docs/screenshots/public-evidence-view.png)
+![Safe AI-unavailable state](docs/screenshots/ai-unavailable-state.png)
+![Cited AI evidence review](docs/screenshots/ai-evidence-review.png)
+![Blocked unsafe output](docs/screenshots/ai-blocked-state.png)
+
+## Demo script (90 seconds)
+
+1. Open Demo scenarios and analyze the fragile release.
+2. Show the decision, evidence, timeline, and audit views.
+3. Switch to Public GitHub evidence and refresh the assessment.
+4. Show deterministic public risk, evidence completeness, and the
+   deployment-readiness disclaimer.
+5. Click AI review with no provider and explain the safe unavailable behavior.
+6. Explain that configured mode provides citation-backed explanations only.
+7. Show the tests/CI badge and the listed limitations.
+
+## Resume-ready project description
+
+- Built a full-stack change-risk dashboard (FastAPI + Next.js) that assesses
+  public GitHub evidence with deterministic, auditable rules.
+- Added a citation-grounded AI review layer with prompt-injection defenses,
+  strict output validation, and safe unavailable/blocked states.
+- Hardened for review with Playwright E2E, axe/Lighthouse accessibility,
+  rate limiting, and GitHub Actions CI.
 
 Phase 1 is a deterministic, explainable analysis engine for synthetic deployment-event logs. No LLM, UI, database, authentication, or cloud deployment.
 
@@ -26,7 +89,7 @@ See `docs/phase1-plan.md` for the exact formulas.
 ## API
 
 ```text
-GET /v1/health -> {status: "ok"}
+GET /v1/health -> {status, environment, public_data, ai_review} (safe status only)
 GET /v1/version -> {schema_version: "1.0", app: "hollow-green"}
 POST /v1/releases:analyze -> ReleaseReport
 GET /v1/demo-releases -> DemoReleaseMeta[] (development/demo only)
@@ -50,7 +113,7 @@ uv sync
 uv run uvicorn api.main:app --app-dir src --reload --port 8000
 ```
 
-Expected: `http://127.0.0.1:8000/v1/health` returns `{"status": "ok"}`. API docs at `http://127.0.0.1:8000/docs`.
+Expected: `http://127.0.0.1:8000/v1/health` returns 200 with safe status fields only. API docs at `http://127.0.0.1:8000/docs`.
 
 Terminal 2 — frontend:
 
@@ -60,7 +123,7 @@ npm install
 npm run dev -- --port 3000
 ```
 
-Expected: primary dashboard at `http://localhost:3000`. `http://127.0.0.1:3000` is also allowed by backend CORS. Set `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` to override the default backend address.
+Expected: primary dashboard at `http://localhost:3000`. `http://127.0.0.1:3000` is also allowed by backend CORS. Set `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000` to override the default backend address. `NEXT_PUBLIC_*` values are embedded into the Next.js browser build at build time and must never contain secrets.
 
 The dashboard has two modes: Demo scenarios (synthetic fixtures) and Public GitHub evidence (verifiable public repository data).
 

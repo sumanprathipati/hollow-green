@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from api import github_client
 from api.github_client import (
@@ -10,6 +10,7 @@ from api.github_client import (
     PublicDataNotFound,
     PublicDataRateLimited,
 )
+from api.rate_limit import assessment_limiter, check_or_429
 from hollow_green.public_data import (
     BASE_LIMITATIONS,
     DATA_SOURCE,
@@ -267,6 +268,7 @@ def build_assessment(
 def get_public_assessment(
     owner: str,
     repo: str,
+    request: Request,
     candidate: str | None = Query(default=None),
     refresh: bool = Query(default=False),
     fixture: bool = Query(default=False),
@@ -293,6 +295,7 @@ def get_public_assessment(
         cached = github_client.get_cached(cache_key)
         if cached is not None:
             return cached
+    check_or_429(request, assessment_limiter, "public-data refresh")
     try:
         raw = github_client.fetch_live_evidence(owner, repo)
     except PublicDataRateLimited as exc:

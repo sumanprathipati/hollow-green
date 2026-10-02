@@ -1,0 +1,28 @@
+# Render Blueprint for the Hollow Green API.
+#
+# This file contains safe non-secret defaults only. Values that depend on
+# your deployment (notably ALLOWED_ORIGINS) must be set in the Render
+# dashboard after the frontend domain is known; see docs/deployment/render.md.
+# No secrets are configured here. Never commit tokens or keys.
+
+services:
+  - type: web
+    name: hollow-green-api
+    runtime: python
+    rootDir: .
+    buildCommand: pip install uv && uv sync --locked
+    startCommand: uv run uvicorn api.main:app --app-dir src --host 0.0.0.0 --port $PORT
+    healthCheckPath: /v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ENVIRONMENT
+        value: production
+      # Required dashboard values (set in Render; not in this file):
+      # - ALLOWED_ORIGINS=https://<your-vercel-domain>   (exact frontend origin)
+      # Optional dashboard values:
+      # - GITHUB_TOKEN=<fine-grained read-only token>    (secret; raises GitHub rate limits)
+      # - AI_REVIEW_PROVIDER=openai_compatible            (secret config; see README)
+      # - AI_REVIEW_BASE_URL=<provider base URL>          (secret config)
+      # - AI_REVIEW_MODEL=<model name>                    (secret config)
+      # - AI_REVIEW_API_KEY=<provider key>                (secret)
